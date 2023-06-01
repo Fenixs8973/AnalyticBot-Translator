@@ -5,15 +5,30 @@
 
 
 
-Для работы с базой данных используется БД Postgres. Команды для создания таблиц и полей:
-CREATE TABLE news(  
-    id int NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    news_text DATE,
-    status INTEGER
+Для работы с базой данных используется БД Postgres 14.7. Команды для создания таблиц и полей:
+
+Таблица со списком пользователей:
+CREATE TABLE users
+(  
+    tg_id BIGINT NOT NULL UNIQUE PRIMARY KEY,
+    first_name VARCHAR(128) NOT NULL,
+    username VARCHAR(32) NOT NULL,
+    is_admin bool
 );
 
-CREATE TABLE users(  
-    id int NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    tgid INTEGER,
-    subscribed BOOLEAN
+Таблица со списком подписок:
+CREATE TABLE subscriptions
+(  
+    id SERIAL NOT NULL PRIMARY KEY,
+    title VARCHAR(50) NOT NULL,
+    description TEXT,
+    price INTEGER NOT NULL
+);
+
+Связывающая таблица подписок и пользователей:
+CREATE TABLE user_subscriptions 
+(
+    tg_id BIGINT REFERENCES users(tg_id),
+    subscription_id INTEGER REFERENCES subscriptions(id),
+    CONSTRAINT user_subscriptions_pk PRIMARY KEY (tg_id, subscription_id)
 );

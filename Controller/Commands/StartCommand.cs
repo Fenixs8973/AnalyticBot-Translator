@@ -2,6 +2,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using HabrPost.Controllers.Messages;
+using HabrPost.Controllers.DB;
 
 namespace HabrPost.Controllers.Commands
 {
@@ -15,24 +16,42 @@ namespace HabrPost.Controllers.Commands
         {
             long chatId;
             MessageController mc = new MessageController();
-            string msg = "Здравствуйте! Вы находителсь в меню.";
+            DBRequest db = new DBRequest();
+
+            //Уникальный идентификатор пользователя
+            string userName;
+            //Имя
+            string firstName;
+            //Текст сообщения
+            string msg;
             InlineKeyboardMarkup inlineKeyboard = new(new[]
             {
                 // first row
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData(text: "Управление подпиской", callbackData: "SubscriptionManagement"),
+                    InlineKeyboardButton.WithCallbackData(text: "Управление подписками", callbackData: "SubscriptionManager"),
                 }
             });
             try
             {
                 chatId = update.Message.Chat.Id;
-                mc.SendInlineKeyboardMessage(msg, inlineKeyboard, chatId);
+                userName = update.Message.From.Username;
+                firstName = update.Message.From.FirstName;
+                msg = $"{firstName}, здравствуйте! Вы находитесь в меню.";
+                await mc.SendInlineKeyboardMessage(msg, inlineKeyboard, update);
             }
             catch
             {
                 chatId = update.CallbackQuery.Message.Chat.Id;
-                mc.ReplaceInlineKeyboardMessage(msg, inlineKeyboard, update);
+                userName = update.CallbackQuery.Message.From.Username;
+                firstName = update.CallbackQuery.Message.From.FirstName;
+                msg = $"{firstName}, здравствуйте! Вы находитесь в меню.";
+                await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
+            }
+            
+            if(!db.HasUserInDB(chatId))
+            {
+                db.SQLInstructionSet($"INSERT INTO users (tg_id, first_name, username, is_admin) VALUES ('{chatId}', '{firstName}', '{userName}', FALSE)");
             }
         }
     }

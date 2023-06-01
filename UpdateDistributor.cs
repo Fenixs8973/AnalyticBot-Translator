@@ -1,55 +1,47 @@
-using HabrPost.Controllers.Commands;
 using Telegram.Bot.Types;
 
 namespace HabrPost.Controllers
-{
-    public class UpdateDistributor
+{    
+    public class UpdateDistributor<T> where T : ITelegramUpdateRedirection, new()
     {
-        static public bool redirection;
-        List<ICommand> commandsList = new List<ICommand>()
+        private static Dictionary<long, T>? redirections;
+
+        public UpdateDistributor()
         {
-            new StartCommand(),
-            new QuerySubscribe(),
-            new QueryUnSubscribe(),
-            new NewPublication(),
-            new SubscriptionManagement(),
-            new PublishNews()
-        };
-        
+            if(redirections == null)
+                redirections = new Dictionary<long, T>();
+        }
         public async Task UpdateProcessing(Update update)
         {
-            if(update.Message != null)
+            long chatId = 0;
+            if (update.Message != null)
+                chatId = update.Message.Chat.Id;
+            else if(update.CallbackQuery != null)
+                chatId = update.CallbackQuery.Message.Chat.Id;
+                
+                T? redirection = redirections.GetValueOrDefault(chatId);
+                if (redirection is null)
+                {
+                    redirection = new T();
+                    redirections.Add(chatId, redirection);
+                    await redirection.UpdateProcessing(update);
+                    return;
+                }
+                await redirection.UpdateProcessing(update);
+        }
+
+        public static void RemoveRedirection(Update update)
+        {
+            long chatId;
+            try
             {
-                if(redirection)
-                {
-                    NewPublication nw = new NewPublication();
-                    nw.Execute(update);
-                }
-                else
-                {
-                    Message message = update.Message;
-                    foreach (var command in commandsList)
-                    {
-                        if(message.Text == command.Name)
-                        {
-                            await command.Execute(update);
-                            break;
-                        }
-                    }
-                }
+                chatId = update.CallbackQuery.Message.Chat.Id;
             }
-            else
+            catch
             {
-                CallbackQuery callBack = update.CallbackQuery;
-                foreach (var command in commandsList)
-                {
-                    if(callBack.Data == command.Name)
-                    {
-                        await command.Execute(update);
-                        break;
-                    }
-                }
+                chatId = update.Message.Chat.Id;
             }
+            redirections.Remove(chatId);
         }
     }
 }

@@ -9,9 +9,8 @@ namespace HabrPost.Controllers
 
     public class BotController : ControllerBase
     {        
-        private UpdateDistributor updateDistributor = new UpdateDistributor();
-
         private TelegramBotClient bot = Bot.GetTelegramBot();
+        private UpdateDistributor<CommandExecutor> updateDistributor = new UpdateDistributor<CommandExecutor>();
 
         
         [HttpPost]
