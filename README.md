@@ -10,46 +10,35 @@
 
 Таблица со списком пользователей:
 
+```SQL
 CREATE TABLE users
-
 (  
-
-    tg_id BIGINT NOT NULL UNIQUE PRIMARY KEY,
-    
-    first_name VARCHAR(128) NOT NULL,
-    
-    username VARCHAR(32) NOT NULL,
-    
+    tg_id BIGINT NOT NULL UNIQUE PRIMARY KEY, 
+    first_name VARCHAR(128) NOT NULL, 
+    username VARCHAR(32) NOT NULL, 
     is_admin bool
-    
 );
+```
 
 Таблица со списком подписок:
 
+```SQL
 CREATE TABLE subscriptions
-
 (  
-
-    id SERIAL NOT NULL PRIMARY KEY,
-    
+    id SERIAL NOT NULL PRIMARY KEY, 
     title VARCHAR(50) NOT NULL,
-    
     description TEXT,
-    
     price INTEGER NOT NULL
-    
 );
+```
 
 Связывающая таблица подписок и пользователей:
 
+```SQL
 CREATE TABLE user_subscriptions 
-
 (
-
     tg_id BIGINT REFERENCES users(tg_id),
-    
-    subscription_id INTEGER REFERENCES subscriptions(id),
-    
+    subscription_id INTEGER REFERENCES subscriptions(id),    
     CONSTRAINT user_subscriptions_pk PRIMARY KEY (tg_id, subscription_id)
-    
 );
+```
