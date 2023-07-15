@@ -3,9 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using HabrPost.Controllers.Messages;
 using HabrPost.Model;
-using HabrPost.Model.Struct;
 using System.Text.RegularExpressions;
-using HabrPost.LogException;
 
 namespace HabrPost.Controllers.Commands.Admin
 {
@@ -15,39 +13,38 @@ namespace HabrPost.Controllers.Commands.Admin
 
         public string Name => "AdminSubscriptionEditingRemove";
 
-        Subscriptions subscriptions = new Subscriptions();
+        SubscriptionsArray subscriptions = new SubscriptionsArray();
 
         public async Task Execute(Update update)
         {
             Regex titleSubscription = new Regex(@"^AdminSubscriptionEditingRemove(.*)");
             CallbackQuery callBack = update.CallbackQuery;
             string titleSub = "";
-            string msg = $"Вы уверены, что хотите удалить подписку {titleSub}?";
-            try
+            MatchCollection matches = titleSubscription.Matches(callBack.Data);
+            if(matches.Count > 0)
             {
                 Match match = titleSubscription.Match(callBack.Data);
                 titleSub = match.Groups[1].ToString();
             }
-            catch (Exception exception)
+            else
             {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
-            } 
-            MessageController mc = new MessageController();
+                return;
+            }
+            
             InlineKeyboardMarkup inlineKeyboardMarkup = new(new[]
+            {
+                // first row
+                new []
                 {
-                    // first row
-                    new []
-                    {
-                        InlineKeyboardButton.WithCallbackData(text: "Да, удалить", callbackData: "AdminSubscriptionEditingRemoveYes" + titleSub)
-                    },
-                    // first row
-                    new []
-                    {
-                        InlineKeyboardButton.WithCallbackData(text: "НЕТ, НЕ удалить", callbackData: $"AdminSubscriptionEditing{titleSub}")
-                    }
-                });
-            await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboardMarkup, update);
+                    InlineKeyboardButton.WithCallbackData(text: "Да, удалить", callbackData: "AdminSubscriptionEditingRemoveYes" + titleSub)
+                },
+                // second row
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "НЕТ, НЕ удалить", callbackData: $"AdminSubscriptionEditing{titleSub}")
+                }
+            });
+            await MessageController.ReplaceInlineKeyboardMessageForMarkup($"Вы уверены, что хотите удалить подписку {titleSub}?", inlineKeyboardMarkup, update);
         }
     }
 }

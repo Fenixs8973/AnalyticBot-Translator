@@ -13,8 +13,6 @@ namespace HabrPost.Controllers.Commands
 
         public string Name => "AdminManager";
 
-        MessageController mc = new MessageController();
-
         HabrPost.Model.Struct.User[] adminList;
 
         public async Task Execute(Update update)
@@ -22,13 +20,13 @@ namespace HabrPost.Controllers.Commands
             DBRequest db = new DBRequest();
             MessageController mc = new MessageController();
             //Обновляем список администраторов
-            Admins.UpdateSubscriptions();
+            await Admins.UpdateSubscriptions();
             //Получаем список администраторов
             adminList = Admins.adminList;
             //Текст для сообщения
             string msg = $"Список администраторов:\n\n";
             //Формируем кнопки для всех администраторов
-            InlineKeyboardMarkup inlineKeyboard = mc.GetInlineKeyboardForAdmins();
+            InlineKeyboardMarkup inlineKeyboard = await MessageController.GetInlineKeyboardForAdmins();
 
             //Формируем текст сообщения
             if(adminList.Length == 0)
@@ -42,7 +40,7 @@ namespace HabrPost.Controllers.Commands
                     msg += "Имя:" + i.firstName + "\n" + "Имя пользователя: " + i.userName + "\n\n";
                 }
             }
-            await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
+            await MessageController.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
         }
     }
 }

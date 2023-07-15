@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace TG_Analytic_Bot.Pages;
+namespace AnalyticBot_Translator.Pages;
 
 public class IndexModel : PageModel
 {

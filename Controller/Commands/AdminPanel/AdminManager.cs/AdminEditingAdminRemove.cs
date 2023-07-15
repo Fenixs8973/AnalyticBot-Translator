@@ -3,9 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using HabrPost.Controllers.Messages;
 using HabrPost.Model;
-using HabrPost.Model.Struct;
 using System.Text.RegularExpressions;
-using HabrPost.LogException;
 using HabrPost.Controllers.DB;
 
 namespace HabrPost.Controllers.Commands.Admin
@@ -16,30 +14,29 @@ namespace HabrPost.Controllers.Commands.Admin
 
         public string Name => "AdminEditingAdminRemove";
 
-        Subscriptions subscriptions = new Subscriptions();
+        SubscriptionsArray subscriptions = new SubscriptionsArray();
 
         public async Task Execute(Update update)
         {
             //Регулярка для выделения имени пользователя
             Regex regexAdminUserName = new Regex(@"^AdminEditingAdminRemove(.*)");
-            CallbackQuery callBack = update.CallbackQuery;
             //Имя пользователя админа 
             string adminUserName = "";
+
+            MatchCollection matches = regexAdminUserName.Matches(update.CallbackQuery.Data);
             //Пробуем получить имя пользователя
-            try
+            if(matches.Count > 0)
             {
                 //Выделение имени пользователя
-                Match match = regexAdminUserName.Match(callBack.Data);
+                Match match = regexAdminUserName.Match(update.CallbackQuery.Data);
                 //Кешируем название подписки
                 adminUserName = match.Groups[1].ToString();
             }
-            catch (Exception exception)
+            else
             {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
-            }  
-            DBRequest db = new DBRequest();
-            MessageController mc = new MessageController();
+                return;
+            }
+                
             //Формируем кнопки для ответного сообщения
             InlineKeyboardMarkup inlineKeyboardMarkup = new(new[]
             {
@@ -53,9 +50,8 @@ namespace HabrPost.Controllers.Commands.Admin
                     InlineKeyboardButton.WithCallbackData(text: "НЕТ, НЕ удалять", callbackData: "AdminManager" + adminUserName)
                 }
             });
-            Model.Struct.User adminInfo = db.GetUser(adminUserName);
-            string msg = $"Вы уверены, что хотите удалить {adminInfo.userName}?";
-            await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboardMarkup, update);
+            Model.Struct.User adminInfo = await DBRequest.GetUser(adminUserName);
+            await MessageController.ReplaceInlineKeyboardMessageForMarkup($"Вы уверены, что хотите удалить {adminInfo.userName}?", inlineKeyboardMarkup, update);
         }
     }
 }

@@ -1,4 +1,4 @@
-
+//https://api.telegram.org/bot6266923002:AAEVzH7kTGIB1-Eajgdycs-Su9EQ2ttZDAA/setWebhook?url=https://3ef5-91-189-242-204.ngrok.io
 namespace HabrPost
 {
     public class Program

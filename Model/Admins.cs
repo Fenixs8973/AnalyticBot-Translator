@@ -20,10 +20,9 @@ namespace HabrPost.Model
             UpdateSubscriptions();
         }
 
-        public static void UpdateSubscriptions()
+        public static async Task UpdateSubscriptions()
         {
-            DBRequest db = new DBRequest();
-            adminList = db.GetAdmins();
+            adminList = await DBRequest.GetAdmins();
         }
     }
 }

@@ -1,29 +1,24 @@
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Payments;
 using Telegram.Bot.Types.ReplyMarkups;
 using HabrPost.Model;
 using HabrPost.LogException;
+using HabrPost.Controllers;
 
 namespace HabrPost.Controllers.Messages
 {
+    //Message message = await botClient.SendInvoiceAsync
     class MessageController
     {
-        public TelegramBotClient botClient => Bot.GetTelegramBot();
+        public static TelegramBotClient botClient => Bot.GetTelegramBot();
 
         ///<summary>
         ///Отправка сообщения с текстом
         ///</summary>
-        public async Task SendSimpleMessage(string msg, Update update)
+        public static async Task SendSimpleMessage(string msg, Update update)
         {
-            long chatId = 0;
-            try
-            {
-                chatId = update.CallbackQuery.Message.Chat.Id;
-            }
-            catch
-            {
-                chatId = update.Message.Chat.Id;
-            }
+            long chatId = CommandExecutor.GetChatId(update);
 
             try
             {
@@ -41,28 +36,61 @@ namespace HabrPost.Controllers.Messages
         ///<summary>
         ///Отправка сообщения с текстом и кнопками
         ///</summary>
-        public async Task SendInlineKeyboardMessage(string msg, InlineKeyboardMarkup inlineKeyboardMarkup, Update update)
+        public static async Task SendInlineKeyboardMessage(string msg, InlineKeyboardMarkup inlineKeyboardMarkup, Update update)
         {
             long chatId = CommandExecutor.GetChatId(update);
             
             try
             {
-                Message sentMessage = await botClient.SendTextMessageAsync(
+                Message sendMessage = await botClient.SendTextMessageAsync(
                     chatId: chatId,
                     text: msg,
                     replyMarkup: inlineKeyboardMarkup);
             }
             catch(Exception exception)
             {
-                Console.WriteLine(exception);
+                ExceptionLogger.NewException(exception);
             }
-            
+        }
+
+        ///<summary>
+        ///Отправка сообщения с текстом и кнопкой оплаты счета
+        ///</summary> 
+        public static async Task SendInvokeMessage(string subTitle, string subDescription, int subPrice, UInt32 payload, Update update)
+        {
+            long chatId = CommandExecutor.GetChatId(update);
+
+            LabeledPrice[] prices = new LabeledPrice[1] { new LabeledPrice(subTitle, subPrice * 100)};
+            try
+            {
+                Message sendMessage = await botClient.SendInvoiceAsync(chatId: chatId, 
+                                                                        title: subTitle, 
+                                                                        description: subDescription,
+                                                                        payload: payload.ToString(),
+                                                                        providerToken: "PROVIDE_TOKEN", 
+                                                                        currency: "RUB",
+                                                                        prices: (IEnumerable<LabeledPrice>)prices
+                                                                        );
+            }
+            catch(Exception exception)
+            {
+                ExceptionLogger.NewException(exception);
+            }
+        }
+
+
+        ///<summary>
+        ///Подтверждающий ответ оплаты
+        ///</summary>
+        public static async Task SendAnswerPreCheckoutQuery(Update update)
+        {
+            await botClient.AnswerPreCheckoutQueryAsync(update.PreCheckoutQuery.Id);
         }
 
         ///<summary>
         ///Изменение кнопок и текста сообщения
         ///</summary>
-        public async Task ReplaceInlineKeyboardMessageForMarkup(string msg, InlineKeyboardMarkup? inlineKeyboardMarkup, Update update)
+        public static async Task ReplaceInlineKeyboardMessageForMarkup(string msg, InlineKeyboardMarkup? inlineKeyboardMarkup, Update update)
         {
             long chatId = CommandExecutor.GetChatId(update);
             
@@ -80,17 +108,16 @@ namespace HabrPost.Controllers.Messages
             }
             catch (Exception exception)
             {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
         }
 
         ///<summary>
         ///Изменение текста сообщения
         ///</summary>
-        public async Task ReplaceInlineKeyboardMessageForText(string msg, Update update)
+        public static async Task ReplaceInlineKeyboardMessageForText(string msg, Update update)
         {
-            long chatId = update.CallbackQuery.Message.Chat.Id;
+            long chatId = CommandExecutor.GetChatId(update);
             int messageId = update.CallbackQuery.Message.MessageId;
             Message EditText = await botClient.EditMessageTextAsync(
                 chatId: update.CallbackQuery.Message.Chat.Id,
@@ -102,24 +129,24 @@ namespace HabrPost.Controllers.Messages
         ///<summary>
         ///Формирование динамических кнопок для просмотра подписок для пользователя
         ///</summary>
-        public InlineKeyboardMarkup GetInlineKeyboardForSubscriptions()
+        public static async Task<InlineKeyboardMarkup> GetInlineKeyboardForSubscriptions()
         {
             int rows;
             int h = 0;
             InlineKeyboardMarkup keyboardInline;
 
-            Subscriptions.UpdateSubscriptions();
+            await SubscriptionsArray.UpdateSubscriptions();
             //Если количество подписок четное
-            if(Subscriptions.subList.Length % 2 == 0)
+            if(SubscriptionsArray.subArray.Length % 2 == 0)
             {
-                rows = Subscriptions.subList.Length/2 + 1;
+                rows = SubscriptionsArray.subArray.Length/2 + 1;
                 InlineKeyboardButton[][] qwerty = new InlineKeyboardButton[rows][];
                 for(int i = 0; i < rows - 1; i++)
                 {
                     qwerty[i] = new InlineKeyboardButton[2]
                     {
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h].title, callbackData: "SubscriptionEditing" + Subscriptions.subList[h].title),
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h + 1].title, callbackData: "SubscriptionEditing" + Subscriptions.subList[h + 1].title)
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h].title, callbackData: "SubscriptionEditing" + SubscriptionsArray.subArray[h].title),
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h + 1].title, callbackData: "SubscriptionEditing" + SubscriptionsArray.subArray[h + 1].title)
                     };
                     h += 2;
                 }
@@ -130,22 +157,22 @@ namespace HabrPost.Controllers.Messages
                 keyboardInline = new(qwerty);
             }
             //Если количество подписок не четное
-            else if(Subscriptions.subList.Length % 2 != 0)
+            else if(SubscriptionsArray.subArray.Length % 2 != 0)
             {
-                rows = (Subscriptions.subList.Length/2) + 2;
+                rows = (SubscriptionsArray.subArray.Length/2) + 2;
                 InlineKeyboardButton[][] qwerty = new InlineKeyboardButton[rows][];
                 for(int i = 0; i < rows - 2; i++)
                 {
                     qwerty[i] = new InlineKeyboardButton[2]
                     {
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h].title, callbackData: "SubscriptionEditing" + Subscriptions.subList[h].title),
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h + 1].title, callbackData: "SubscriptionEditing" + Subscriptions.subList[h + 1].title)
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h].title, callbackData: "SubscriptionEditing" + SubscriptionsArray.subArray[h].title),
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h + 1].title, callbackData: "SubscriptionEditing" + SubscriptionsArray.subArray[h + 1].title)
                     };
                     h += 2;
                 }
                 qwerty[rows - 2] = new InlineKeyboardButton[]
                 {
-                    InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[Subscriptions.subList.Length - 1].title, callbackData: "SubscriptionEditing" + Subscriptions.subList[Subscriptions.subList.Length - 1].title)
+                    InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[SubscriptionsArray.subArray.Length - 1].title, callbackData: "SubscriptionEditing" + SubscriptionsArray.subArray[SubscriptionsArray.subArray.Length - 1].title)
                 };
                 qwerty[rows - 1] = new InlineKeyboardButton[]
                 {
@@ -169,24 +196,24 @@ namespace HabrPost.Controllers.Messages
         ///<summary>
         ///Формирование динамических кнопок для просмотра подписок для администратора
         ///</summary>
-        public InlineKeyboardMarkup GetInlineKeyboardForAdminSubscriptions()
+        public static async Task<InlineKeyboardMarkup> GetInlineKeyboardForAdminSubscriptions()
         {
             int rows;
             int h = 0;
             InlineKeyboardMarkup keyboardInline;
 
-            Subscriptions.UpdateSubscriptions();
+            await SubscriptionsArray.UpdateSubscriptions();
             //Если количество подписок четное
-            if(Subscriptions.subList.Length % 2 == 0)
+            if(SubscriptionsArray.subArray.Length % 2 == 0)
             {
-                rows = Subscriptions.subList.Length/2 + 2;
+                rows = SubscriptionsArray.subArray.Length/2 + 2;
                 InlineKeyboardButton[][] qwerty = new InlineKeyboardButton[rows][];
                 for(int i = 0; i < rows - 2; i++)
                 {
                     qwerty[i] = new InlineKeyboardButton[2]
                     {
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h].title, callbackData: "AdminSubscriptionEditing" + Subscriptions.subList[h].title),
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h + 1].title, callbackData: "AdminSubscriptionEditing" + Subscriptions.subList[h + 1].title)
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h].title, callbackData: "AdminSubscriptionEditing" + SubscriptionsArray.subArray[h].title),
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h + 1].title, callbackData: "AdminSubscriptionEditing" + SubscriptionsArray.subArray[h + 1].title)
                     };
                     h += 2;
                 }
@@ -201,22 +228,22 @@ namespace HabrPost.Controllers.Messages
                 keyboardInline = new(qwerty);
             }
             //Если количество подписок не четное
-            else if(Subscriptions.subList.Length % 2 != 0)
+            else if(SubscriptionsArray.subArray.Length % 2 != 0)
             {
-                rows = (Subscriptions.subList.Length/2) + 3;
+                rows = (SubscriptionsArray.subArray.Length/2) + 3;
                 InlineKeyboardButton[][] qwerty = new InlineKeyboardButton[rows][];
                 for(int i = 0; i < rows - 3; i++)
                 {
                     qwerty[i] = new InlineKeyboardButton[2]
                     {
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h].title, callbackData: "AdminSubscriptionEditing" + Subscriptions.subList[h].title),
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h + 1].title, callbackData: "AdminSubscriptionEditing" + Subscriptions.subList[h + 1].title)
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h].title, callbackData: "AdminSubscriptionEditing" + SubscriptionsArray.subArray[h].title),
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h + 1].title, callbackData: "AdminSubscriptionEditing" + SubscriptionsArray.subArray[h + 1].title)
                     };
                     h += 2;
                 }
                 qwerty[rows - 3] = new InlineKeyboardButton[]
                 {
-                    InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[Subscriptions.subList.Length - 1].title, callbackData: "AdminSubscriptionEditing" + Subscriptions.subList[Subscriptions.subList.Length - 1].title)
+                    InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[SubscriptionsArray.subArray.Length - 1].title, callbackData: "AdminSubscriptionEditing" + SubscriptionsArray.subArray[SubscriptionsArray.subArray.Length - 1].title)
                 };
                 qwerty[rows - 2] = new InlineKeyboardButton[]
                 {
@@ -250,23 +277,23 @@ namespace HabrPost.Controllers.Messages
         ///<summary>
         ///Формирование динамических кнопок для публикации новости
         ///</summary>
-        public InlineKeyboardButton[][] GetInlineKeyboardForNewPublication()
+        public static async Task<InlineKeyboardButton[][]> GetInlineKeyboardForNewPublication()
         {
             int rows;
             int h = 0;
 
-            Subscriptions.UpdateSubscriptions();
+            await SubscriptionsArray.UpdateSubscriptions();
             //Если количество подписок четное
-            if(Subscriptions.subList.Length % 2 == 0)
+            if(SubscriptionsArray.subArray.Length % 2 == 0)
             {
-                rows = Subscriptions.subList.Length/2 + 2;
+                rows = SubscriptionsArray.subArray.Length/2 + 2;
                 InlineKeyboardButton[][] inlineKeyboardButton = new InlineKeyboardButton[rows][];
                 for(int i = 0; i < rows - 2; i++)
                 {
                     inlineKeyboardButton[i] = new InlineKeyboardButton[2]
                     {
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h].title, callbackData: "AdminNewPublication" + Subscriptions.subList[h].title),
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h + 1].title, callbackData: "AdminNewPublication" + Subscriptions.subList[h + 1].title)
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h].title, callbackData: "AdminNewPublication" + SubscriptionsArray.subArray[h].title),
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h + 1].title, callbackData: "AdminNewPublication" + SubscriptionsArray.subArray[h + 1].title)
                     };
                     h += 2;
                 }
@@ -281,22 +308,22 @@ namespace HabrPost.Controllers.Messages
                 return inlineKeyboardButton;
             }
             //Если количество подписок не четное
-            else if(Subscriptions.subList.Length % 2 != 0)
+            else if(SubscriptionsArray.subArray.Length % 2 != 0)
             {
-                rows = (Subscriptions.subList.Length/2) + 3;
+                rows = (SubscriptionsArray.subArray.Length/2) + 3;
                 InlineKeyboardButton[][] inlineKeyboardButton = new InlineKeyboardButton[rows][];
                 for(int i = 0; i < rows - 3; i++)
                 {
                     inlineKeyboardButton[i] = new InlineKeyboardButton[2]
                     {
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h].title, callbackData: "AdminNewPublication" + Subscriptions.subList[h].title),
-                        InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[h + 1].title, callbackData: "AdminNewPublication" + Subscriptions.subList[h + 1].title)
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h].title, callbackData: "AdminNewPublication" + SubscriptionsArray.subArray[h].title),
+                        InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[h + 1].title, callbackData: "AdminNewPublication" + SubscriptionsArray.subArray[h + 1].title)
                     };
                     h += 2;
                 }
                 inlineKeyboardButton[rows - 3] = new InlineKeyboardButton[]
                 {
-                    InlineKeyboardButton.WithCallbackData(text: Subscriptions.subList[Subscriptions.subList.Length - 1].title, callbackData: "AdminNewPublication" + Subscriptions.subList[Subscriptions.subList.Length - 1].title)
+                    InlineKeyboardButton.WithCallbackData(text: SubscriptionsArray.subArray[SubscriptionsArray.subArray.Length - 1].title, callbackData: "AdminNewPublication" + SubscriptionsArray.subArray[SubscriptionsArray.subArray.Length - 1].title)
                 };
                 inlineKeyboardButton[rows - 2] = new InlineKeyboardButton[]
                 {
@@ -322,7 +349,7 @@ namespace HabrPost.Controllers.Messages
         ///<summary>
         ///Кнопки для команды /start
         ///</summary>
-        static public readonly InlineKeyboardMarkup Start = new(new[]
+        public static readonly InlineKeyboardMarkup Start = new(new[]
         {
             // first row
             new []
@@ -331,17 +358,16 @@ namespace HabrPost.Controllers.Messages
             }
         });
 
-
         ///<summary>
         ///Формирование динамических кнопок для списка администраторов
         ///</summary>
-        public InlineKeyboardMarkup GetInlineKeyboardForAdmins()
+        public static async Task<InlineKeyboardMarkup> GetInlineKeyboardForAdmins()
         {
             int rows;
             int h = 0;
             InlineKeyboardMarkup keyboardInline;
 
-            Admins.UpdateSubscriptions();
+            await Admins.UpdateSubscriptions();
             //Если количество администраторов четное
             if(Admins.adminList.Length % 2 == 0)
             {

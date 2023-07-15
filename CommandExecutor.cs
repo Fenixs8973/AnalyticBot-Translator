@@ -35,7 +35,7 @@ namespace HabrPost.Controllers
                 new StartCommand(),
                 new SubscriptionManager(),
                 new SubsciptionEditing(),
-                new SubscribeAccept(),
+                new SubscribeInvoke(),
                 new SubscribeCancel(),
 
             };
@@ -64,7 +64,7 @@ namespace HabrPost.Controllers
         List<string> regexUserCommandList = new List<string>()
         {
             "^(SubscriptionEditing)(.*)",
-            "^(SubscribeAccept)(.*)",
+            "^(SubscribeInvoke)(.*)",
             "^(SubscribeCancel)(.*)"
 
         };
@@ -86,7 +86,6 @@ namespace HabrPost.Controllers
 
         private async Task ExecuteCommand(Update update)
         {
-            DBRequest db = new DBRequest(); 
             //Если пришло текстовое сообщение
             if(update.Message != null)
             {
@@ -104,76 +103,28 @@ namespace HabrPost.Controllers
             //Если команда пришла из кнопки
             else if(update.CallbackQuery != null)
             {
-                try
+                //Ищем совпадения с регулярным выражением adminRegex
+                MatchCollection adminCommandMatches = adminRegex.Matches(update.CallbackQuery.Data);
+                CallbackQuery callBack = update.CallbackQuery;
+                //Перебираем все пользовательские регулярки
+                foreach(string i in regexUserCommandList)
                 {
-                    //Ищем совпадения с регулярным выражением adminRegex
-                    MatchCollection adminCommandMatches = adminRegex.Matches(update.CallbackQuery.Data);
-                    CallbackQuery callBack = update.CallbackQuery;
-
-                    //Перебираем все пользовательские регулярки
-                    foreach(string i in regexUserCommandList)
+                    Regex regexUserCommand = new Regex(i);
+                    MatchCollection regexUserCommandMatches = regexUserCommand.Matches(update.CallbackQuery.Data);
+                    if(regexUserCommandMatches.Count > 0)
                     {
-                        Regex regexUserCommand = new Regex(i);
-                        MatchCollection regexUserCommandMatches = regexUserCommand.Matches(update.CallbackQuery.Data);
-                        if(regexUserCommandMatches.Count > 0)
+                        Match match = regexUserCommand.Match(callBack.Data);
+                        //Перебираем все команды
+                        foreach(var command in commandsList)
                         {
-                            Match match = regexUserCommand.Match(callBack.Data);
-                            //Перебираем все команды
-                            foreach(var command in commandsList)
+                            //Проверка через регулярку
+                            if(match.Groups[1].ToString() == command.Name)
                             {
-                                //Проверка через регулярку
-                                if(match.Groups[1].ToString() == command.Name)
-                                {
-                                    await command.Execute(update);
-                                    return;
-                                }
-                                //Проверка целого CallBack
-                                else if(update.CallbackQuery.Data == command.Name)
-                                {
-                                    await command.Execute(update);
-                                    return;
-                                }
+                                await command.Execute(update);
+                                return;
                             }
-                        }
-                    }
-                    //Проверяем админ регулярки
-                    if(adminCommandMatches.Count > 0 && db. AdminVerify(update.CallbackQuery.Message.Chat.Id))
-                    {
-                        
-                        try
-                        {
-                            //Поиск подходящей регулярки
-                            foreach(string i in regexAdminCommandList)
-                            {
-                                Regex regex = new Regex(i);
-                                MatchCollection regexAdminCommandMatches = regex.Matches(callBack.Data);
-                                if(regexAdminCommandMatches.Count > 0)
-                                {
-                                    Match match = regex.Match(callBack.Data);
-                                    //Поиск команды из регулярки в общем списке команд
-                                    foreach (var command in commandsList)
-                                    {
-                                        if(match.Groups[1].ToString() == command.Name)
-                                        {
-                                            await command.Execute(update);
-                                            return;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            ExceptionLogger newLog = new ExceptionLogger();
-                            newLog.NewException(exception);
-                        }                    
-                    }
-                    //Нет совпадений с регуляркой adminRegex, ищем комадну в commandsList
-                    else
-                    {
-                        foreach (var command in commandsList)
-                        {
-                            if(update.CallbackQuery.Data == command.Name)
+                            //Проверка целого CallBack
+                            else if(update.CallbackQuery.Data == command.Name)
                             {
                                 await command.Execute(update);
                                 return;
@@ -181,13 +132,42 @@ namespace HabrPost.Controllers
                         }
                     }
                 }
-                catch (Exception exception)
+                //Проверяем админ регулярки
+                if(adminCommandMatches.Count > 0 && await DBRequest.AdminVerify(update.CallbackQuery.Message.Chat.Id))
                 {
-                    ExceptionLogger newLog = new ExceptionLogger();
-                    newLog.NewException(exception);
+                    //Поиск подходящей регулярки
+                    foreach(string i in regexAdminCommandList)
+                    {
+                        Regex regex = new Regex(i);
+                        MatchCollection regexAdminCommandMatches = regex.Matches(callBack.Data);
+                        if(regexAdminCommandMatches.Count > 0)
+                        {
+                            Match match = regex.Match(callBack.Data);
+                            //Поиск команды из регулярки в общем списке команд
+                            foreach (var command in commandsList)
+                            {
+                                if(match.Groups[1].ToString() == command.Name)
+                                {
+                                    await command.Execute(update);
+                                    return;
+                                }
+                            }
+                        }
+                    }                
+                }
+                //Нет совпадений с регуляркой adminRegex, ищем комадну в commandsList
+                else
+                {
+                    foreach (var command in commandsList)
+                    {
+                        if(update.CallbackQuery.Data == command.Name)
+                        {
+                            await command.Execute(update);
+                            return;
+                        }
+                    }
                 }
             }
-            
         }
 
         public void StartListen(IRedirection newRedirection)
@@ -203,17 +183,13 @@ namespace HabrPost.Controllers
 
         static public long GetChatId(Update update)
         {
-            long chatId;
-            try
-            {
+            long chatId = 0;
+            if(update.CallbackQuery != null)
                 chatId = update.CallbackQuery.Message.Chat.Id;
-                return chatId;
-            }
-            catch
-            {
+            else if(update.Message != null)
                 chatId = update.Message.Chat.Id;
-                return chatId;
-            }
+            
+            return chatId;
         }
     }
 }

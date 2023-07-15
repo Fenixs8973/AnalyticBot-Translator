@@ -3,9 +3,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using HabrPost.Controllers.Messages;
 using HabrPost.Model;
-using HabrPost.Model.Struct;
 using System.Text.RegularExpressions;
-using HabrPost.LogException;
 using HabrPost.Controllers.DB;
 
 namespace HabrPost.Controllers.Commands.Admin
@@ -16,32 +14,29 @@ namespace HabrPost.Controllers.Commands.Admin
 
         public string Name => "AdminEditingNewAdminYes";
 
-        Subscriptions subscriptions = new Subscriptions();
+        SubscriptionsArray subscriptions = new SubscriptionsArray();
 
         public async Task Execute(Update update)
         {
             //Регулярка для выделения имени пользователя
             Regex regexAdminUserName = new Regex(@"^AdminEditingNewAdminYes(.*)");
-            CallbackQuery callBack = update.CallbackQuery;
-            //Текст для ответного сообщения
-            string msg;
             //Имя пользователя
             string adminUserName = "";
+
+            MatchCollection matches = regexAdminUserName.Matches(update.CallbackQuery.Data);
             //Пробуем получить имя пользователя
-            try
+            if(matches.Count > 0)
             {
                 //Выделение имени пользователя
-                Match match = regexAdminUserName.Match(callBack.Data);
+                Match match = regexAdminUserName.Match(update.CallbackQuery.Data);
                 //Кешируем имя пользователя
                 adminUserName = match.Groups[1].ToString();
             }
-            catch (Exception exception)
+            else
             {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
-            } 
-            DBRequest db = new DBRequest();
-            MessageController mc = new MessageController();
+                return;
+            }
+                
             //Формируем кнопки для ответного сообщения
             InlineKeyboardMarkup inlineKeyboardMarkup = new(new[]
             {
@@ -51,21 +46,10 @@ namespace HabrPost.Controllers.Commands.Admin
                     InlineKeyboardButton.WithCallbackData(text: "Меню", callbackData: "/admin")
                 },
             });
-            try
-            {
-                //Меняем is_admin в БД на TRUE для определенного пользователя
-                db.SQLInstructionSet($"UPDATE users SET is_admin = 'TRUE' WHERE username = '{adminUserName}'");
-                msg = $"{adminUserName} успешно добавлен в список администраторов!";
-                //Отправяляем подтверждающее сообщение
-                await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboardMarkup, update);
-            }
-            catch(Exception exception)
-            {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
-                msg = $"Произошла ошибка!";
-                await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboardMarkup, update);
-            }
+            //Меняем is_admin в БД на TRUE для определенного пользователя
+            await DBRequest.SQLInstructionSet($"UPDATE users SET is_admin = 'TRUE' WHERE username = '{adminUserName}'");
+            //Отправяляем подтверждающее сообщение
+            await MessageController.ReplaceInlineKeyboardMessageForMarkup($"{adminUserName} успешно добавлен в список администраторов!", inlineKeyboardMarkup, update);
         }
     }
 }

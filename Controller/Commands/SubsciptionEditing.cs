@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using HabrPost.LogException;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using HabrPost.Controllers.DB;
@@ -18,30 +17,28 @@ namespace HabrPost.Controllers.Commands.Admin
         public async Task Execute(Update update)
         {
             Regex titleSubscription = new Regex(@"^SubscriptionEditing(.*)");
-            CallbackQuery callBack = update.CallbackQuery;
-            DBRequest db = new DBRequest();
             string titleSub = "";
-            SubList subscriptions = new SubList();
+            Subscription subscriptions = new Subscription();
             bool hasSubscriptrion = false;
             //Пытаемся найти имя подписки
-            try
+            MatchCollection matches = titleSubscription.Matches(update.CallbackQuery.Data);
+            if(matches.Count > 0)
             {
-                Match match = titleSubscription.Match(callBack.Data);
+                Match match = titleSubscription.Match(update.CallbackQuery.Data);
                 titleSub = match.Groups[1].ToString();
-                subscriptions = db.GetSubscriptionTitle(titleSub);
-            }  
-            catch (Exception exception)
+                subscriptions = await DBRequest.GetSubscriptionFromTitle(titleSub);
+            }
+            else
             {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
-            }         
-            MessageController mc = new MessageController();
+                return;
+            }
+
             InlineKeyboardMarkup SubscribeAccept = new(new[]
             {
                 // first row
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData(text: "Подписаться", callbackData: $"SubscribeAccept{titleSub}"),
+                    InlineKeyboardButton.WithCallbackData(text: "Подписаться", callbackData: $"SubscribeInvoke{titleSub}"),
                 },
                 new []
                 {
@@ -61,12 +58,12 @@ namespace HabrPost.Controllers.Commands.Admin
                 }
             });
 
-            hasSubscriptrion = db.HasUserSubscription(update.CallbackQuery.Message.Chat.Id, subscriptions.id);
+            hasSubscriptrion = await DBRequest.HasUserSubscription(CommandExecutor.GetChatId(update), subscriptions.id);
             
             if(hasSubscriptrion)
-                await mc.ReplaceInlineKeyboardMessageForMarkup($"\"{titleSub}\" - Активна\n{subscriptions.description}\n{subscriptions.price}р.", SubscribeCancel, update);
+                await MessageController.ReplaceInlineKeyboardMessageForMarkup($"\"{titleSub}\" - Активна\n{subscriptions.description}\n{subscriptions.price}р.", SubscribeCancel, update);
             else
-                await mc.ReplaceInlineKeyboardMessageForMarkup($"\"{titleSub}\" - Не активна\n{subscriptions.description}\n{subscriptions.price}р.", SubscribeAccept, update);
+                await MessageController.ReplaceInlineKeyboardMessageForMarkup($"\"{titleSub}\" - Не активна\n{subscriptions.description}\n{subscriptions.price}р.", SubscribeAccept, update);
         }
     }
 }

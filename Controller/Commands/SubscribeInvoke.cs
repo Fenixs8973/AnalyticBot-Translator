@@ -7,18 +7,18 @@ using HabrPost.Controllers.Messages;
 
 namespace HabrPost.Controllers.Commands.Admin
 {
-    class SubscribeAccept : ICommand
+    class SubscribeInvoke : ICommand
     {
         public TelegramBotClient botClient => Bot.GetTelegramBot();
 
-        public string Name => "SubscribeAccept";
+        public string Name => "SubscribeInvoke";
 
         public async Task Execute(Update update)
         {
             //Сюда будем записывать данные о подписке
             Subscription subscription = new Subscription();
             //Регулярка для выделения названия подписки
-            Regex titleSubscription = new Regex("^SubscribeAccept(.*)");
+            Regex titleSubscription = new Regex("^SubscribeInvoke(.*)");
             //Сюда будем сохранять название подписки
             string titleSub = "";
             //Имеет ли пользователь подписку
@@ -35,16 +35,22 @@ namespace HabrPost.Controllers.Commands.Admin
                 subscription = await DBRequest.GetSubscriptionFromTitle(titleSub);
                 //Проверяем имеется ли у пользователя эта подписка
                 hasSubscriptrion = await DBRequest.HasUserSubscription(update.CallbackQuery.Message.Chat.Id, subscription.id);
-                if(!hasUser)
+
+                if(!hasSubscriptrion) 
                 {
-                    await DBRequest.SQLInstructionSet($"INSERT INTO users (tg_id) VALUES ('{update.CallbackQuery.Message.Chat.Id}')");
-                    await DBRequest.SQLInstructionSet($"INSERT INTO user_subscriptions VALUES ('{update.CallbackQuery.Message.Chat.Id}', '{subscription.id}')");
-                }
-                
-                if(!hasSubscriptrion)
-                {
-                    await DBRequest.SQLInstructionSet($"INSERT INTO user_subscriptions VALUES ('{update.CallbackQuery.Message.Chat.Id}', '{subscription.id}')");
-                    await MessageController.ReplaceInlineKeyboardMessageForMarkup($"Подписка успешно оформлена", MessageController.Start, update);
+                    uint invoicePayloadId = await DBRequest.GetInviocePayloadId(update.CallbackQuery.Message.Chat.Id, subscription.title, false);
+
+                    if(invoicePayloadId == 0)
+                    {
+                        await DBRequest.SQLInstructionSet($"INSERT INTO invoice_payload (chat_id, title_subscribe, payment_completed) VALUES ({CommandExecutor.GetChatId(update)}, '{subscription.title}', FALSE)");
+
+                        await MessageController.SendInvokeMessage(subscription.title, subscription.description, subscription.price, await DBRequest.GetInviocePayloadId(update.CallbackQuery.Message.Chat.Id, subscription.title, false), update);
+                    }
+                    else
+                    {
+                        await MessageController.SendInvokeMessage(subscription.title, subscription.description, subscription.price, invoicePayloadId, update);
+                    }
+
                 }
                 else
                 {

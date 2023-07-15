@@ -3,27 +3,26 @@ using HabrPost.Model.Struct;
 
 namespace HabrPost.Model
 {
-    public class Subscriptions
+    public class SubscriptionsArray
     {
-        static public SubList[] subList;
+        static public Subscription[] subArray;
 
         void SetSubscriptions(int id, string title, string description, int price)
         {
-            subList[id].id = id;
-            subList[id].title = title;
-            subList[id].description = description;
-            subList[id].price = price;
+            subArray[id].id = id;
+            subArray[id].title = title;
+            subArray[id].description = description;
+            subArray[id].price = price;
         }
 
-        public Subscriptions()
+        public SubscriptionsArray()
         {
             UpdateSubscriptions();
         }
 
-        public static void UpdateSubscriptions()
+        public static async Task UpdateSubscriptions()
         {
-            DBRequest db = new DBRequest();
-            subList = db.GetSubscriptions();
+            subArray = await DBRequest.GetSubscriptions();
         }
     }
 }

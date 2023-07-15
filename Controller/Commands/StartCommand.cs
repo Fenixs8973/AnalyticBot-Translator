@@ -14,14 +14,12 @@ namespace HabrPost.Controllers.Commands
 
         public async Task Execute(Update update)
         {
-            long chatId;
-            MessageController mc = new MessageController();
-            DBRequest db = new DBRequest();
+            long chatId = CommandExecutor.GetChatId(update);
 
             //Уникальный идентификатор пользователя
-            string userName;
+            string userName = null;
             //Имя
-            string firstName;
+            string firstName = null;
             //Текст сообщения
             string msg;
             InlineKeyboardMarkup inlineKeyboard = new(new[]
@@ -32,26 +30,25 @@ namespace HabrPost.Controllers.Commands
                     InlineKeyboardButton.WithCallbackData(text: "Управление подписками", callbackData: "SubscriptionManager"),
                 }
             });
-            try
+
+            if(update.Message != null)
             {
-                chatId = update.Message.Chat.Id;
                 userName = update.Message.From.Username;
                 firstName = update.Message.From.FirstName;
                 msg = $"{firstName}, здравствуйте! Вы находитесь в меню.";
-                await mc.SendInlineKeyboardMessage(msg, inlineKeyboard, update);
+                await MessageController.SendInlineKeyboardMessage(msg, inlineKeyboard, update);
             }
-            catch
+            else if(update.CallbackQuery != null)
             {
-                chatId = update.CallbackQuery.Message.Chat.Id;
                 userName = update.CallbackQuery.Message.From.Username;
                 firstName = update.CallbackQuery.Message.From.FirstName;
                 msg = $"{firstName}, здравствуйте! Вы находитесь в меню.";
-                await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
+                await MessageController.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
             }
             
-            if(!db.HasUserInDB(chatId))
+            if(!await DBRequest.HasUserInDB(chatId))
             {
-                db.SQLInstructionSet($"INSERT INTO users (tg_id, first_name, username, is_admin) VALUES ('{chatId}', '{firstName}', '{userName}', FALSE)");
+                await DBRequest.SQLInstructionSet($"INSERT INTO users (tg_id, first_name, username, is_admin) VALUES ('{chatId}', '{firstName}', '{userName}', FALSE)");
             }
         }
     }

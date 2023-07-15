@@ -1,6 +1,6 @@
 namespace HabrPost.Model.Struct
 {
-    public struct SubList
+    public struct Subscription
     {
         //id подписки в бд
         public int id { get; set; }

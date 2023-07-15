@@ -14,25 +14,23 @@ namespace HabrPost.Controllers.Commands
 
         public string Name => "SubscriptionManager";
 
-        Subscriptions subscriptions = new Subscriptions();
+        SubscriptionsArray subscriptions = new SubscriptionsArray();
 
         public async Task Execute(Update update)
         {
-            long chatId = update.CallbackQuery.Message.Chat.Id;
-            DBRequest db = new DBRequest();
+            long chatId = CommandExecutor.GetChatId(update);
             string msg = "Управление подписками. Вы можете выбрать определенную подписку.";
             bool hasSubscriptrion = false;
-            foreach(SubList i in Subscriptions.subList)
+            foreach(Subscription i in SubscriptionsArray.subArray)
             {
-                hasSubscriptrion = db.HasUserSubscription(chatId, i.id);
+                hasSubscriptrion = await DBRequest.HasUserSubscription(chatId, i.id);
                 if(hasSubscriptrion)
                     msg += $"\n\n{i.title} - Активна\n*Описание: {i.description}\n*Цена: {i.price}р.";
                 else
                     msg += $"\n\n{i.title} - Не Активна\n*Описание: {i.description}\n*Цена: {i.price}р.";
             }
-            MessageController mc = new MessageController();
-            InlineKeyboardMarkup inlineKeyboard = mc.GetInlineKeyboardForSubscriptions();
-            await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
+            InlineKeyboardMarkup inlineKeyboard = await MessageController.GetInlineKeyboardForSubscriptions();
+            await MessageController.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
         }
     }
 }

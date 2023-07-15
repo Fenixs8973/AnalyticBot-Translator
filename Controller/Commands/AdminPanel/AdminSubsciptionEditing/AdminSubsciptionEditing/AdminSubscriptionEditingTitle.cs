@@ -6,7 +6,6 @@ using HabrPost.Controllers.DB;
 using HabrPost.Model.Struct;
 using System.Text.RegularExpressions;
 using HabrPost.Model;
-using HabrPost.LogException;
 
 namespace HabrPost.Controllers.Commands
 {
@@ -31,7 +30,7 @@ namespace HabrPost.Controllers.Commands
         //Получил ли бот новое название
         private bool titleAccept = false;
         //Список подписок
-        SubList[] subList = Subscriptions.subList;
+        Subscription[] Subscription = SubscriptionsArray.subArray;
 
         public async Task Execute(Update update)
         {
@@ -42,39 +41,28 @@ namespace HabrPost.Controllers.Commands
             Match match = priceSubscription.Match(update.CallbackQuery.Data);
             //Получаем название подписки
             subscriptionTitle = match.Groups[1].ToString();
-            await mc.SendSimpleMessage("Пришлите новое название для подписки", update);
+            await MessageController.SendSimpleMessage("Пришлите новое название для подписки", update);
             Executor.StartListen(this);
         }
 
         public async Task Redirection(Update update)
         {
-            DBRequest db = new DBRequest();
-            MessageController mc = new MessageController();
             InlineKeyboardMarkup inlineKeyboardMarkup = new(new[]
-                {
-                    // first row
-                    new []
-                    {
-                        InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "AdminSubscriptionManager")
-                    }
-                });
-            try
-            {                
-                //Получаем текст для описания
-                newTitle = update.Message.Text;
-                //Меняем текст описания
-                db.SQLInstructionSet($"UPDATE subscriptions SET title = '{newTitle}' WHERE title = '{subscriptionTitle}'");
-                //Отправляем сообщение об успешном редактировании описания
-                await mc.SendInlineKeyboardMessage($"Название для {subscriptionTitle} успешно узменена на:\n\n {newTitle}", inlineKeyboardMarkup, update);
-                //Останавливаем переадрессацию
-                Executor.StopListen(update);
-            }
-            catch (Exception exception)
             {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
-                Executor.StopListen(update);
-            }
+                // first row
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "AdminSubscriptionManager")
+                }
+            });            
+            //Получаем текст для названия
+            newTitle = update.Message.Text;
+            //Меняем текст названия
+            await DBRequest.SQLInstructionSet($"UPDATE subscriptions SET title = '{newTitle}' WHERE title = '{subscriptionTitle}'");
+            //Отправляем сообщение об успешном редактировании названия
+            await MessageController.SendInlineKeyboardMessage($"Название для {subscriptionTitle} успешно узменена на:\n\n {newTitle}", inlineKeyboardMarkup, update);
+            //Останавливаем переадрессацию
+            Executor.StopListen(update);
         }
     }
 }

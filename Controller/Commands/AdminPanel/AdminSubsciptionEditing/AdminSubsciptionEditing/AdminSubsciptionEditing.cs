@@ -1,6 +1,4 @@
 using System.Text.RegularExpressions;
-using HabrPost.LogException;
-using HabrPost.Model;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using HabrPost.Controllers.DB;
@@ -19,22 +17,21 @@ namespace HabrPost.Controllers.Commands.Admin
         public async Task Execute(Update update)
         {
             Regex titleSubscription = new Regex(@"^AdminSubscriptionEditing(.*)");
-            CallbackQuery callBack = update.CallbackQuery;
             string titleSub = "";
-            SubList subscriptions = new SubList();
-            try
+            Subscription subscriptions = new Subscription();
+
+            MatchCollection matches = titleSubscription.Matches(update.CallbackQuery.Data);
+            if(matches.Count > 0)
             {
-                Match match = titleSubscription.Match(callBack.Data);
+                Match match = titleSubscription.Match(update.CallbackQuery.Data);
                 titleSub = match.Groups[1].ToString();
-                DBRequest db = new DBRequest();
-                subscriptions = db.GetSubscriptionTitle(titleSub);
+                subscriptions = await DBRequest.GetSubscriptionFromTitle(titleSub);
             }
-            catch (Exception exception)
+            else
             {
-                ExceptionLogger exceptionLogger = new ExceptionLogger();
-                exceptionLogger.NewException(exception);
-            }         
-            MessageController mc = new MessageController();
+                return;
+            }
+                    
             InlineKeyboardMarkup inlineKeyboard = new(new[]
             {
                 // first row
@@ -56,7 +53,7 @@ namespace HabrPost.Controllers.Commands.Admin
                     InlineKeyboardButton.WithCallbackData(text: "Назад", callbackData: "AdminSubscriptionManager"),
                 }
             });
-            await mc.ReplaceInlineKeyboardMessageForMarkup($"Изменить параметры подписки \"{titleSub}\"", inlineKeyboard, update);
+            await MessageController.ReplaceInlineKeyboardMessageForMarkup($"Изменить параметры подписки \"{titleSub}\"", inlineKeyboard, update);
         }
     }
 }

@@ -14,20 +14,10 @@ namespace HabrPost.Controllers.Commands.Admin
 
         public async Task Execute(Update update)
         {
-            DBRequest db = new DBRequest();
 
-            long chatId;
-            //Получение chatId из текстового сообщения или из кнопки
-            try
-            {
-                chatId = update.Message.Chat.Id;
-            }
-            catch (System.Exception)
-            {
-                chatId = update.CallbackQuery.Message.Chat.Id;
-            }
+            long chatId = CommandExecutor.GetChatId(update);
             //Если у пользователя есть права администратора
-            if (db.AdminVerify(chatId))
+            if (await DBRequest.AdminVerify(chatId))
             {
                 InlineKeyboardMarkup inlineKeyboard = new(new[]
                 {
@@ -45,16 +35,11 @@ namespace HabrPost.Controllers.Commands.Admin
                         InlineKeyboardButton.WithCallbackData(text: "Управление Администраторами", callbackData: "AdminManager"),
                     }
                 });
-                MessageController mc = new MessageController();
-                try
-                {
-                    CallbackQuery callback = update.CallbackQuery;
-                    await mc.ReplaceInlineKeyboardMessageForMarkup("Вы находитесь в панели администратора", inlineKeyboard, update);
-                }
-                catch
-                {
-                    await mc.SendInlineKeyboardMessage("Вы находитесь в панели администратора", inlineKeyboard, update);
-                }
+
+                if(update.Message != null)
+                    await MessageController.SendInlineKeyboardMessage("Вы находитесь в панели администратора", inlineKeyboard, update);
+                else if(update.CallbackQuery != null)
+                    await MessageController.ReplaceInlineKeyboardMessageForMarkup("Вы находитесь в панели администратора", inlineKeyboard, update);
             }
         }
     }

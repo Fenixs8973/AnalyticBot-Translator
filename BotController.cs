@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Telegram.Bot.Types;
 using Telegram.Bot;
+using HabrPost.Controllers.Messages;
 
 namespace HabrPost.Controllers
 {
@@ -16,10 +17,30 @@ namespace HabrPost.Controllers
         [HttpPost]
         public async void Post(Update update)//Сюда будут приходить апдейты
         {
-            if(update.Message == null && update.CallbackQuery == null)
+            if(update.Message != null)
+            {
+                if(update.Message.SuccessfulPayment != null)
+                {
+                    InvoicePayloadController invoicePayload = new InvoicePayloadController();
+                    await invoicePayload.SuccessfulPayment(update);
+                    return;
+                }
+                await updateDistributor.UpdateProcessing(update);
                 return;
+            }
+            else if(update.CallbackQuery != null)
+            {
+                await updateDistributor.UpdateProcessing(update);
+                return;
+            }
+            else if(update.PreCheckoutQuery != null)
+            {
+                await MessageController.SendAnswerPreCheckoutQuery(update);
+                return;
+            }
 
-            await updateDistributor.UpdateProcessing(update);//Ловит обновление(новое сообщение) 
+            await updateDistributor.UpdateProcessing(update);//Ловит обновление
+            return;
         }
         [HttpGet]
         public string Get()

@@ -6,15 +6,13 @@ namespace HabrPost.Controllers.DB
 {
     class DBRequest
     {
-        private readonly string dbUserName = "postgres";
-        private readonly string dbUserPassword = "root";
-        public static bool hasUser;
-        public static bool subscribed;
+        private static readonly string dbUserName = "postgres";
+        private static readonly string dbUserPassword = "root";
 
         ///<summary>
         ///Выполнить "изменяющий" таблицу запрос
         ///</summary>
-        public async void SQLInstructionSet(string sqlRequest)
+        public static async Task SQLInstructionSet(string sqlRequest)
         {
             try
             {
@@ -32,8 +30,7 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             
         } 
@@ -41,7 +38,7 @@ namespace HabrPost.Controllers.DB
         ///<summary>
         ///Поиск пользователя в бд
         ///</summary>
-        public bool HasUserInDB(long chatId)
+        public static async Task<bool> HasUserInDB(long chatId)
         {
             try
             {
@@ -52,7 +49,7 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = $"SELECT * FROM users WHERE tg_id = {chatId}";
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             conn.Close();
@@ -68,8 +65,7 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             return false;
         }
@@ -77,7 +73,7 @@ namespace HabrPost.Controllers.DB
         ///<summary>
         ///Получить список подписчиков по определенному фильтру
         ///</summary>
-        public List<long> GetListSubs(string sqlRequest)
+        public static async Task<List<long>> GetListSubs(string sqlRequest)
         {
             List<long> subs = new List<long>();
             try
@@ -89,7 +85,7 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = sqlRequest;
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             while(reader.Read())
@@ -109,8 +105,7 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             return subs;
         }
@@ -118,11 +113,11 @@ namespace HabrPost.Controllers.DB
         ///<summary>
         ///Получить список подписок
         ///</summary>
-        public SubList[] GetSubscriptions()
+        public static async Task<Subscription[]> GetSubscriptions()
         {
             string sqlRequest = "SELECT COUNT(*) FROM subscriptions";
             int count = 0;
-            SubList[] subList = new SubList[0];
+            Subscription[] Subscription = new Subscription[0];
             try
             {
                 using(var conn = new NpgsqlConnection(connectionString: $"Server=localhost;Port=5432;User Id={dbUserName};Password={dbUserPassword};Database=postgres;"))
@@ -132,12 +127,12 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = sqlRequest;
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             reader.Read();
                             count = reader.GetInt32(0);
-                            subList = new SubList[count];
+                            Subscription = new Subscription[count];
                             reader.Close();
 
                             cmd.CommandText = "SELECT * FROM subscriptions ORDER BY id";
@@ -151,10 +146,10 @@ namespace HabrPost.Controllers.DB
                                 title = reader.GetValue(1).ToString();
                                 description = reader.GetString(2);
                                 price = reader.GetInt32(3);
-                                subList[i].SetSubscription(id, title, description, price);
+                                Subscription[i].SetSubscription(id, title, description, price);
                             }
                             reader.Close();
-                            return subList;
+                            return Subscription;
                         }
                     }
                     conn.Close();
@@ -162,58 +157,17 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
-            return subList;
+            return Subscription;
         }
-
-        // ///<summary>
-        // ///Получить общее количество подписок
-        // ///</summary>
-        // public int GetSubscriptionsQuantity()
-        // {
-        //     string sqlRequest = "SELECT COUNT(*) FROM subscriptions";
-        //     int count = 0;
-        //     try
-        //     {
-        //         using(var conn = new NpgsqlConnection(connectionString: $"Server=localhost;Port=5432;User Id={dbUserName};Password={dbUserPassword};Database=postgres;"))
-        //         {
-        //             conn.Open();
-        //             using(var cmd = new NpgsqlCommand())
-        //             {
-        //                 cmd.Connection = conn;
-        //                 cmd.CommandText = sqlRequest;
-        //                 NpgsqlDataReader reader = cmd.ExecuteReader();
-        //                 if(reader.HasRows)
-        //                 {
-        //                     reader.Read();
-        //                     conn.Close();
-        //                     return count = reader.GetInt32(0);
-        //                 }
-        //                 else
-        //                 {
-
-        //                     conn.Close();
-        //                     return 0;
-        //                 }
-        //             }
-        //         }
-        //     }
-        //     catch(Exception exception)
-        //     {
-        //         ExceptionLogger newLog = new ExceptionLogger();
-        //         newLog.NewException(exception);
-        //     }
-        //     return 0;
-        // }
 
         ///<summary>
         ///Получить данные подписки по названию
         ///</summary>
-        public SubList GetSubscriptionTitle(string title)
+        public static async Task<Subscription> GetSubscriptionFromTitle(string title)
         {
-            SubList subscriprion = new SubList();
+            Subscription subscriprion = new Subscription();
             string sqlRequest = $"SELECT id, title, description, price FROM subscriptions WHERE title = '{title}'";
             try
             {
@@ -224,7 +178,7 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = sqlRequest;
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             reader.Read();
@@ -240,17 +194,15 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             return subscriprion;
         }
 
-
         ///<summary>
         ///Проверка. Есть у пользователя подписка
         ///</summary>
-        public bool HasUserSubscription(long chatId, int subId)
+        public static async Task<bool> HasUserSubscription(long chatId, int subId)
         {
             string sqlRequest = $"SELECT * FROM user_subscriptions WHERE tg_id = '{chatId}' AND subscription_id = '{subId}'";
             try
@@ -262,7 +214,7 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = sqlRequest;
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             conn.Close();
@@ -279,8 +231,7 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             return false;
         }
@@ -288,7 +239,7 @@ namespace HabrPost.Controllers.DB
         ///<summary>
         ///Проверка. Имеет ли пользователь права администратора
         ///</summary>
-        public bool AdminVerify(long chatId)
+        public static async Task<bool> AdminVerify(long chatId)
         {
             string sqlRequest = $"SELECT * FROM users WHERE tg_id = '{chatId}' AND is_admin = 'TRUE'";
             try
@@ -300,7 +251,7 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = sqlRequest;
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             conn.Close();
@@ -317,8 +268,7 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             return false;
         }
@@ -326,7 +276,7 @@ namespace HabrPost.Controllers.DB
         ///<summary>
         ///Получение списка администоров
         ///</summary>
-        public User[] GetAdmins()
+        public static async Task<User[]> GetAdmins()
         {
             //Получение количества админов
             string sqlRequest = "SELECT COUNT(*) FROM users WHERE is_admin = 'TRUE'";
@@ -341,7 +291,7 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = sqlRequest;
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             //Начинаем чтение результатов
@@ -381,8 +331,7 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             return userList;
         }
@@ -390,7 +339,7 @@ namespace HabrPost.Controllers.DB
         ///<summary>
         ///Получение информации о пользователе
         ///</summary>
-        public User GetUser(string userName)
+        public static async Task<User> GetUser(string userName)
         {
             //Получение количества админов
             string sqlRequest = $"SELECT * FROM users WHERE username ='{userName}'";
@@ -404,7 +353,7 @@ namespace HabrPost.Controllers.DB
                     {
                         cmd.Connection = conn;
                         cmd.CommandText = sqlRequest;
-                        NpgsqlDataReader reader = cmd.ExecuteReader();
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
                         if(reader.HasRows)
                         {
                             //Начинаем чтение результатов
@@ -423,10 +372,88 @@ namespace HabrPost.Controllers.DB
             }
             catch(Exception exception)
             {
-                ExceptionLogger newLog = new ExceptionLogger();
-                newLog.NewException(exception);
+                ExceptionLogger.NewException(exception);
             }
             return user;
+        }
+
+        ///<summary>
+        ///Получение номера InvoicePayload 
+        ///</summary>
+        public static async Task<UInt32> GetInviocePayloadId(long chatId, string subTitle, bool paymentCompleted)
+        {
+            UInt32 inviocePayloadId;
+            //Получение количества админов
+            string sqlRequest = $"SELECT invoice_payload_id FROM invoice_payload WHERE chat_id = {chatId} AND title_subscribe = '{subTitle}' AND payment_completed = {paymentCompleted} LIMIT 1";
+            try
+            {
+                using(var conn = new NpgsqlConnection(connectionString: $"Server=localhost;Port=5432;User Id={dbUserName};Password={dbUserPassword};Database=postgres;"))
+                {
+                    conn.Open();
+                    using(var cmd = new NpgsqlCommand())
+                    {
+                        cmd.Connection = conn;
+                        cmd.CommandText = sqlRequest;
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
+                        if(reader.HasRows)
+                        {
+                            //Начинаем чтение результатов
+                            reader.Read();
+                            //Сохраняем результат
+                            inviocePayloadId = (UInt32) reader.GetInt64(0);
+                            reader.Close();
+                            return inviocePayloadId;
+                        }
+                    }
+                    conn.Close();
+                }
+            }
+            catch(Exception exception)
+            {
+                ExceptionLogger.NewException(exception);
+            }
+            return 0;
+        }
+
+
+        ///<summary>
+        ///Получение данных InvoicePayload
+        ///</summary>
+        public static async Task<InvoicePayload> GetInfoInviocePayload(UInt32 invoicePayloadId)
+        {
+            InvoicePayload invoicePayload = new InvoicePayload();
+            //Получение количества админов
+            string sqlRequest = $"SELECT * FROM invoice_payload WHERE invoice_payload_id = {invoicePayloadId}";
+            try
+            {
+                using(var conn = new NpgsqlConnection(connectionString: $"Server=localhost;Port=5432;User Id={dbUserName};Password={dbUserPassword};Database=postgres;"))
+                {
+                    conn.Open();
+                    using(var cmd = new NpgsqlCommand())
+                    {
+                        cmd.Connection = conn;
+                        cmd.CommandText = sqlRequest;
+                        NpgsqlDataReader reader = await cmd.ExecuteReaderAsync();
+                        if(reader.HasRows)
+                        {
+                            //Начинаем чтение результатов
+                            reader.Read();
+                            //Сохраняем результат
+                            invoicePayload.invoicePayloadId = (UInt32) reader.GetInt64(0);
+                            invoicePayload.chatId = reader.GetInt64(1);
+                            invoicePayload.subscriptionTitle = reader.GetString(2);
+                            reader.Close();
+                            return invoicePayload;
+                        }
+                    }
+                    conn.Close();
+                }
+            }
+            catch(Exception exception)
+            {
+                ExceptionLogger.NewException(exception);
+            }
+            return invoicePayload;
         }
     }
 }

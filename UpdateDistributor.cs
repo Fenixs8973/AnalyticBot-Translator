@@ -32,15 +32,12 @@ namespace HabrPost.Controllers
 
         public static void RemoveRedirection(Update update)
         {
-            long chatId;
-            try
-            {
-                chatId = update.CallbackQuery.Message.Chat.Id;
-            }
-            catch
-            {
+            long chatId = 0;
+            if (update.Message != null)
                 chatId = update.Message.Chat.Id;
-            }
+            else if(update.CallbackQuery != null)
+                chatId = update.CallbackQuery.Message.Chat.Id;
+            
             redirections.Remove(chatId);
         }
     }

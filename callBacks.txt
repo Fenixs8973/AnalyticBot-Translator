@@ -1,0 +1,12 @@
+Управление подписками - AdminSubscriptionManager (AdminPanel)
+Новый пост - AdminSubscriptionNew (AdminSubscriptionNew)
+ - AdminSubscriptionEditing (AdminSubscriptionEditing)
+
+
+Название - AdminSubscriptionEditingTitle (AdminSubscriptionEditing)
+Описание - AdminSubscriptionEditingDescription (AdminSubscriptionEditing)
+Цена - AdminSubscriptionEditingPrice (AdminSubscriptionEditing)
+
+Да, удалить - AdminSubscriptionEditingRemoveYes (AdminSubscriptionEditingRemove)
+
+Фильтр - "//^#)#*(^)\"

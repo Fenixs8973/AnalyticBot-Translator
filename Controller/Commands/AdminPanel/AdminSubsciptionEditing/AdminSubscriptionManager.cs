@@ -13,19 +13,18 @@ namespace HabrPost.Controllers.Commands.Admin
 
         public string Name => "AdminSubscriptionManager";
 
-        Subscriptions subscriptions = new Subscriptions();
+        SubscriptionsArray subscriptions = new SubscriptionsArray();
 
         public async Task Execute(Update update)
         {
             string msg = "Управление списком подписок";
-            foreach(SubList i in Subscriptions.subList)
+            foreach(Subscription i in SubscriptionsArray.subArray)
             {
                 msg += $"\n\n{i.title}:\nОписание: {i.description}\nЦена: {i.price}р.";
             }
-            MessageController mc = new MessageController();
             //Формируем inlineKeyboard для всех подписок
-            InlineKeyboardMarkup inlineKeyboard = mc.GetInlineKeyboardForAdminSubscriptions();
-            await mc.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
+            InlineKeyboardMarkup inlineKeyboard = await MessageController.GetInlineKeyboardForAdminSubscriptions();
+            await MessageController.ReplaceInlineKeyboardMessageForMarkup(msg, inlineKeyboard, update);
         }
     }
 }

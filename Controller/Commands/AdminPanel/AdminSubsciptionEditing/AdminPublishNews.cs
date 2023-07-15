@@ -2,7 +2,6 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using HabrPost.Controllers.Messages;
 using HabrPost.Controllers.DB;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace HabrPost.Controllers.Commands
@@ -15,10 +14,6 @@ namespace HabrPost.Controllers.Commands
 
         public async Task Execute(Update update)
         {
-            DBRequest db = new DBRequest();
-            MessageController mc = new MessageController();
-
-
             string[] subscriptionArray = new string[0];
             Regex regex = new Regex($"\n-(.*);");
             string messageText = update.CallbackQuery.Message.Text;
@@ -32,7 +27,7 @@ namespace HabrPost.Controllers.Commands
                 {
                     subscriptionArray[i] = match.Groups[1].ToString();
                 }
-            }//SELECT tg_id FROM user_subscriptions JOIN subscriptions sub ON user_subscriptions.subscriptions=sub.id WHERE sub.title = 'Технологии' OR sub.title = 'VIP' 
+            }
             
             string sqlReqest = $"SELECT tg_id FROM user_subscriptions JOIN subscriptions AS sub ON user_subscriptions.subscription_id = sub.id WHERE sub.title =";
             //Формирование SQL запроса
@@ -53,15 +48,15 @@ namespace HabrPost.Controllers.Commands
                 }
             }
 
-            List<long> subs = db.GetListSubs(sqlReqest);
+            List<long> subs = await DBRequest.GetListSubs(sqlReqest);
             messageText = messageText.Remove(0, 13);
             messageText = "Вышел новый пост:\n\n" + messageText;
             messageText = messageText.Remove(messageText.IndexOf($"\n\nПолучатели:\n-"));
             foreach(long chatId in subs)
-                await mc.SendSimpleMessage(messageText, update);
+                await MessageController.SendSimpleMessage(messageText, update);
 
             //"Новый пост:\n\njhjhjjkl\n\nПолучатели:\n-тестовая;\n-vip;\n-njknjnj;"
-            await mc.ReplaceInlineKeyboardMessageForText("Пост опубликован", update);
+            await MessageController.ReplaceInlineKeyboardMessageForText("Пост опубликован", update);
         }
     }
 }
