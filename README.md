@@ -15,7 +15,7 @@ CREATE TABLE users
     tg_id BIGINT NOT NULL UNIQUE PRIMARY KEY, 
     first_name VARCHAR(128) NOT NULL,
     username VARCHAR(32) NOT NULL,
-    is_admin bool
+    is_admin BOOL
 );
 ```
 
