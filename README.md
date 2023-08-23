@@ -7,6 +7,7 @@
 
 Для работы с базой данных используется БД Postgres 14.7. Команды для создания таблиц и полей:
 
+
 Таблица со списком пользователей:
 ```SQL
 CREATE TABLE users
@@ -17,6 +18,7 @@ CREATE TABLE users
     is_admin bool
 );
 ```
+
 
 Таблица со списком подписок:
 ```SQL
@@ -29,6 +31,7 @@ CREATE TABLE subscriptions
 );
 ```
 
+
 Связывающая таблица подписок и пользователей:
 ```SQL
 CREATE TABLE user_subscriptions 
@@ -38,6 +41,7 @@ CREATE TABLE user_subscriptions
     CONSTRAINT user_subscriptions_pk PRIMARY KEY (tg_id, subscription_id)
 );
 ```
+
 
 Таблица контроля за InvoicePayload
 ```SQL
