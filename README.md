@@ -10,7 +10,6 @@
 Таблица со списком пользователей:
 ```SQL
 CREATE TABLE users
-
 (  
     tg_id BIGINT NOT NULL UNIQUE PRIMARY KEY, 
     first_name VARCHAR(128) NOT NULL,
