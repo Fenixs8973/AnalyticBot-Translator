@@ -67,7 +67,7 @@ namespace HabrPost.Controllers.Messages
                                                                         title: subTitle, 
                                                                         description: subDescription,
                                                                         payload: payload.ToString(),
-                                                                        providerToken: "PROVIDE_TOKEN", 
+                                                                        providerToken: "1744374395:TEST:c64e08679d65dcc627ac", 
                                                                         currency: "RUB",
                                                                         prices: (IEnumerable<LabeledPrice>)prices
                                                                         );

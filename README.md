@@ -7,21 +7,16 @@
 
 Для работы с базой данных используется БД Postgres 14.7. Команды для создания таблиц и полей:
 
-
 Таблица со списком пользователей:
-```SQL
 CREATE TABLE users
 (  
-    tg_id BIGINT NOT NULL UNIQUE PRIMARY KEY, 
+    tg_id BIGINT NOT NULL UNIQUE PRIMARY KEY,
     first_name VARCHAR(128) NOT NULL,
     username VARCHAR(32) NOT NULL,
-    is_admin BOOL
+    is_admin bool
 );
-```
-
 
 Таблица со списком подписок:
-```SQL
 CREATE TABLE subscriptions
 (  
     id SERIAL NOT NULL PRIMARY KEY,
@@ -29,27 +24,19 @@ CREATE TABLE subscriptions
     description TEXT,
     price INTEGER NOT NULL
 );
-```
-
 
 Связывающая таблица подписок и пользователей:
-```SQL
 CREATE TABLE user_subscriptions 
 (
-    tg_id BIGINT REFERENCES users(tg_id),    
+    tg_id BIGINT REFERENCES users(tg_id),
     subscription_id INTEGER REFERENCES subscriptions(id),
     CONSTRAINT user_subscriptions_pk PRIMARY KEY (tg_id, subscription_id)
 );
-```
-
 
 Таблица контроля за InvoicePayload
-```SQL
-CREATE TABLE invoice_payload
-(  
+CREATE TABLE invoice_payload(  
     invoice_payload_id SERIAL NOT NULL PRIMARY KEY,
     chat_id BIGINT NOT NULL,
     title_subscribe VARCHAR(50) NOT NULL,
     payment_completed BOOL NOT NULL
 );
-```

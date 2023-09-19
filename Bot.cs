@@ -13,7 +13,7 @@ namespace HabrPost
                 return client;
             }
 
-            client = new TelegramBotClient("TOKEN");
+            client = new TelegramBotClient("6266923002:AAEVzH7kTGIB1-Eajgdycs-Su9EQ2ttZDAA");
             return client;
         }
     }
